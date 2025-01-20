@@ -1,0 +1,6 @@
+[package]
+name = "encode_and_decode_strings"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]

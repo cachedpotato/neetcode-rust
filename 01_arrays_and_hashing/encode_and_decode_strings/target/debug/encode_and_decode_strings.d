@@ -1,0 +1,1 @@
+/home/lowlife/neetcode-rust/01_arrays_and_hashing/encode_and_decode_strings/target/debug/encode_and_decode_strings: /home/lowlife/neetcode-rust/01_arrays_and_hashing/encode_and_decode_strings/src/main.rs
