@@ -9,6 +9,7 @@ fn is_valid_parentheses(s: &String) -> bool {
     ]);
     let mut stack: Vec<char> = Vec::new();
 
+    //TODO: MAKE THIS PURELY FUNCTIONAL WITHOUT USING for_each()
     for c in s.chars() {
         if c == '(' || c == '[' || c == '{' {
             stack.push(c);
