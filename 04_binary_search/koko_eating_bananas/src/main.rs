@@ -1,14 +1,12 @@
 use std::cmp::{max, min};
 fn min_eating_speed(pile: &Vec<u32>, h: u32) -> u32 {
-	let mut l = pile
-		.iter()
-		.fold(pile[0], |acc, x| min(acc, *x));
+	let mut l = 1;
 
-	let mut r = pile
+	let r = pile
 		.iter()
 		.fold(pile[0], |acc, x| max(acc, *x));
 
-	let mut out: u32 = u32::MAX;
+	let mut min_speed: u32 = u32::MAX;
 
 	while l < r {
 		let m = l + (r - l) / 2;
@@ -19,20 +17,21 @@ fn min_eating_speed(pile: &Vec<u32>, h: u32) -> u32 {
 				else {acc + x / m + 1}
 			});
 
-		println!("{}", time);
-
-		if time > h {
-			r -= 1;
+		if time <= h {
+			min_speed = min(min_speed, m);
+			break;
 		} else {
-			l = m;
-			out = min(m, out);
+			//GOTTA EAT FASTER YOUNG MAN
+			l = m + 1;
+			min_speed = l;
 		}
 	}
-	out
+	min_speed
 }
 
 fn main() {
-	let pile: Vec<u32> = vec![25, 10, 23, 4];
-	let h = 4;
-    println!("{}", min_eating_speed(&pile, h));
+	let mut pile: Vec<u32> = vec![25, 10, 23, 4];
+    println!("{}", min_eating_speed(&pile, 4));
+	pile = vec![1, 4, 3, 2];
+    println!("{}", min_eating_speed(&pile, 9));
 }

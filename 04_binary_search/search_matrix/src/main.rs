@@ -21,17 +21,19 @@ fn search_matrix(matrix: &Vec<Vec<i32>>, target: i32) -> bool {
 	//col
 	let mut l = 0;
 	let mut r = matrix[row].len() - 1;
-	while l <= r {
-		let m = l + (r - l) / 2;
+	let mut m = 0;
+	while l < r {
+		m = l + (r - l) / 2;
 		if matrix[row][m] == target {
 			return true;
-		} else if matrix[row][m] > target {
-			r = m - 1;
-		} else {
+		} else if matrix[row][m] < target {
 			l = m + 1;
+		} else {
+			r = m;
 		}
 	}
-	false
+	matrix[row][m] == target
+	
 }
 
 fn main() {
