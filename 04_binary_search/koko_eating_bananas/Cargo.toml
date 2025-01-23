@@ -1,0 +1,6 @@
+[package]
+name = "koko_eating_bananas"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
