@@ -1,0 +1,3 @@
+[submodule "06_linked_list/linked_list_book"]
+	path = 0600_linked_list/linked_list_book
+	url = git@github.com:cachedpotato/rust-linked-list-book.git
