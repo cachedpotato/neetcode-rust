@@ -1,0 +1,7 @@
+[package]
+name = "merge_two_sorted_linked_lists"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rust-linked-list ={ path = "../linked_list_book"}
