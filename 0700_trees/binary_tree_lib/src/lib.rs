@@ -8,13 +8,51 @@ pub struct BinaryTree<T> {
     depth: usize,
     size: usize,
 }
-
 type Link<T> = Option<NonNull<Node<T>>>;
 
 struct Node<T> {
     elem: T,
     left: Link<T>,
     right: Link<T>,
+}
+
+pub struct CursorMut<'a, T> {
+    cur: Link<T>,
+    tree: &'a mut BinaryTree<T>,
+}
+
+impl<'a, T> CursorMut<'a, T> {
+    pub fn has_siblings(&mut self) -> bool {
+        unsafe {
+            if self.cur.is_none() {
+                return false;
+            }
+            (*self.cur.unwrap().as_ptr()).right.is_some()
+                || (*self.cur.unwrap().as_ptr()).left.is_some()
+        }
+    }
+
+    pub fn move_left(&mut self) {
+        unsafe {
+            if let Some(node) = self.cur {
+                self.cur = (*node.as_ptr()).left;
+            } else {
+                //fallback: return to head
+                self.cur = self.tree.head;
+            }
+        }
+    }
+
+    pub fn move_right(&mut self) {
+        unsafe {
+            if let Some(node) = self.cur {
+                self.cur = (*node.as_ptr()).right;
+            } else {
+                //fallback: return to head
+                self.cur = self.tree.head;
+            }
+        }
+    }
 }
 
 impl<T: Ord + Eq> BinaryTree<T> {
@@ -26,6 +64,13 @@ impl<T: Ord + Eq> BinaryTree<T> {
         }
     }
 
+    pub fn cursor_mut(&mut self) -> CursorMut<'_, T> {
+        CursorMut {
+            cur: None,
+            tree: self,
+        }
+    }
+
     pub fn add(&mut self, elem: T) {
         unsafe {
             let new = NonNull::new_unchecked(Box::into_raw(Box::new(Node {
@@ -33,33 +78,27 @@ impl<T: Ord + Eq> BinaryTree<T> {
                 left: None,
                 right: None,
             })));
-
-            let mut curr = self.head;
-            if let Some(node) = curr {
-                let mut depth = 1;
-                while (*node.as_ptr()).left.is_some() || (*node.as_ptr()).right.is_some() {
-                    if (*node.as_ptr()).elem < (*new.as_ptr()).elem {
-                        curr = (*node.as_ptr()).left;
-                    } else {
-                        curr = (*node.as_ptr()).right;
-                    }
-                    depth += 1;
-                }
-                if (*node.as_ptr()).elem < (*new.as_ptr()).elem {
-                    (*curr.unwrap().as_ptr()).left = Some(new);
-                } else {
-                    (*curr.unwrap().as_ptr()).right = Some(new);
-                }
-
-                self.size += 1;
-                self.depth = if self.depth > depth {self.depth} else {depth};
-
-            } else {
+            if self.head.is_none() {
                 self.head = Some(new);
                 self.size += 1;
                 self.depth += 1;
+                return;
             }
-
+            let mut m = self.cursor_mut();
+            while let Some(node) = m.cur {
+                if !m.has_siblings() {
+                    let val = &(*node.as_ptr()).elem;
+                    if &(*new.as_ptr()).elem < val {
+                        (*node.as_ptr()).left = Some(new);
+                    } else {
+                        (*node.as_ptr()).right = Some(new);
+                    }
+                    self.size += 1;
+                    self.depth += 1;
+                    return;
+                }
+            }
+            unreachable!();
         }
     }
 
