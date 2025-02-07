@@ -1,1 +1,0 @@
-/home/lowlife/neetcode-rust/01_arrays_and_hashing/longest_consecutive_sequence/target/debug/longest_consecutive_sequence: /home/lowlife/neetcode-rust/01_arrays_and_hashing/longest_consecutive_sequence/src/main.rs
