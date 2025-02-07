@@ -1,5 +1,6 @@
-use std::{collections::VecDeque, ptr::NonNull};
+use std::{collections::VecDeque, marker::PhantomData, ptr::NonNull};
 
+#[derive(Debug, Clone)]
 pub struct BinaryTree<T> {
     root: Link<T>,
     size: usize,
@@ -8,6 +9,7 @@ pub struct BinaryTree<T> {
 
 type Link<T> = Option<NonNull<Node<T>>>; //fuck it we ball
 
+#[derive(Debug, Clone)]
 struct Node<T> {
     elem: T,
     left: Link<T>,
@@ -57,6 +59,35 @@ impl<T> BinaryTree<T> {
         todo!()
     }
 
+    // getting referecnes of nth (in BFS order) node
+    // zero indexing obviously
+    // or is one indexing more intuitive here idk
+    pub fn nth(&self, n: usize) -> Option<&T> {
+        if self.size < n {
+            return None;
+        }
+        let mut deque = VecDeque::new();
+        deque.push_back(self.root.as_ref());
+        let mut idx = 0;
+        unsafe {
+            loop {
+                // BFS logic
+                let curr = deque.pop_front().unwrap().unwrap();
+                if n == idx {
+                    return Some(&(*curr.as_ptr()).elem);
+                }
+
+                if (*curr.as_ptr()).left.is_some() {
+                    deque.push_back((*curr.as_ptr()).left.as_ref());
+                }
+                if (*curr.as_ptr()).right.is_some() {
+                    deque.push_back((*curr.as_ptr()).right.as_ref());
+                }
+                idx += 1;
+            }
+        }
+    }
+
     pub fn is_empty(&self) -> bool {
         self.size == 0
     }
@@ -71,6 +102,25 @@ impl<T> BinaryTree<T> {
 
     pub fn root_node(&self) -> Option<&T> {
         self.root.map(|node| unsafe { &(*node.as_ptr()).elem })
+    }
+
+    // iterators
+    pub fn iter(&self) -> Iter<'_, T> {
+        Iter {
+            root: self.root,
+            size: self.size,
+            idx: 0,
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn iter_mut(&mut self) -> IterMut<'_, T> {
+        IterMut {
+            root: self.root,
+            size: self.size,
+            idx: 0,
+            _phantom: PhantomData,
+        }
     }
 }
 
@@ -109,10 +159,185 @@ impl<T: PartialOrd> Node<T> {
         }
     }
 }
-d
+
+// ITERATORS
+// Because tree in and of itself is a goddamn pain to iterate over
+// First flatten it into a vec
+// then iterate over that
+
+// 1. Iter
+pub struct Iter<'a, T> {
+    root: Link<T>,
+    size: usize,
+    idx: usize,
+    _phantom: PhantomData<&'a T>,
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.size < self.idx {
+            return None;
+        }
+        let mut deque = VecDeque::new();
+        deque.push_back(self.root.as_ref());
+        let mut idx = 0;
+        unsafe {
+            loop {
+                // BFS logic
+                let curr = deque.pop_front().unwrap().unwrap();
+                if self.idx == idx {
+                    return Some(&(*curr.as_ptr()).elem);
+                }
+
+                if (*curr.as_ptr()).left.is_some() {
+                    deque.push_back((*curr.as_ptr()).left.as_ref());
+                }
+                if (*curr.as_ptr()).right.is_some() {
+                    deque.push_back((*curr.as_ptr()).right.as_ref());
+                }
+                idx += 1;
+            }
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.size, Some(self.size))
+    }
+}
+
+impl<T> ExactSizeIterator for Iter<'_, T> {
+    fn len(&self) -> usize {
+        self.size
+    }
+}
+
+impl<'a, T> IntoIterator for &'a BinaryTree<T> {
+    type Item = &'a T;
+    type IntoIter = Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+// 2. IterMut
+// LESSON LEARNED: DO NOT CREATE ITERATORS THAT BORROW ITEMS FROM ITSELF
+// IT WILL CAUSE ALL SORTS OF JANK
+pub struct IterMut<'a, T> {
+    root: Link<T>,
+    size: usize,
+    idx: usize,
+    _phantom: PhantomData<&'a mut T>,
+}
+
+impl<'a, T> Iterator for IterMut<'a, T> {
+    type Item = &'a mut T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.size < self.idx {
+            return None;
+        }
+        let mut deque = VecDeque::new();
+        deque.push_back(self.root.as_ref());
+        let mut idx = 0;
+        unsafe {
+            loop {
+                // BFS logic
+                let curr = deque.pop_front().unwrap().unwrap();
+                if self.idx == idx {
+                    return Some(&mut (*curr.as_ptr()).elem);
+                }
+
+                if (*curr.as_ptr()).left.is_some() {
+                    deque.push_back((*curr.as_ptr()).left.as_ref());
+                }
+                if (*curr.as_ptr()).right.is_some() {
+                    deque.push_back((*curr.as_ptr()).right.as_ref());
+                }
+                idx += 1;
+            }
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.size, Some(self.size))
+    }
+}
+
+impl<T> ExactSizeIterator for IterMut<'_, T> {
+    fn len(&self) -> usize {
+        self.size
+    }
+}
+
+impl<'a, T> IntoIterator for &'a mut BinaryTree<T> {
+    type IntoIter = IterMut<'a, T>;
+    type Item = &'a mut T;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
+    }
+}
+
+// 3. IntoIter
+pub struct IntoIter<T> {
+    tree: Vec<T>,
+}
+
+impl<T> BinaryTree<T> {
+    pub fn to_into_iter(self) -> IntoIter<T> {
+        IntoIter {
+            tree: self.flatten(),
+        }
+    }
+}
+
+impl<T> Iterator for IntoIter<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.tree.pop()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.tree.len(), Some(self.tree.len()))
+    }
+}
+
+impl<T> ExactSizeIterator for IntoIter<T> {
+    fn len(&self) -> usize {
+        self.tree.len()
+    }
+}
+
+impl<T> IntoIterator for BinaryTree<T> {
+    type Item = T;
+    type IntoIter = IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.to_into_iter()
+    }
+}
+
+// USEFUL TRAITS
 impl<T> Default for BinaryTree<T> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl<T: PartialEq> PartialEq for BinaryTree<T> {
+    fn eq(&self, other: &Self) -> bool {
+        todo!();
+        self.size == other.size && self.depth == other.depth
+    }
+}
+
+impl<T: PartialOrd> PartialOrd for BinaryTree<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.size().cmp(&other.size()))
     }
 }
 
@@ -123,7 +348,7 @@ pub trait BinarySearchTree<T> {
     fn bst_add(&mut self, elem: T);
 }
 
-impl<T: PartialEq + PartialOrd + std::fmt::Debug> BinarySearchTree<T> for BinaryTree<T> {
+impl<T: PartialEq + PartialOrd> BinarySearchTree<T> for BinaryTree<T> {
     fn binary_search(&self, target: T) -> bool {
         let mut cur = self.root.as_ref().unwrap();
         unsafe {
@@ -159,13 +384,13 @@ impl<T: PartialEq + PartialOrd + std::fmt::Debug> BinarySearchTree<T> for Binary
         }
     }
 
-    fn bst_add(&mut self, target: T) {
+    fn bst_add(&mut self, elem: T) {
         //pretty much the same as binary_search with one additional step
         //if there's a hit, do nothing
         //if there isn't add to tree
         unsafe {
             let mut new = NonNull::new_unchecked(Box::into_raw(Box::new(Node {
-                elem: target,
+                elem,
                 left: None,
                 right: None,
             })));
@@ -178,17 +403,55 @@ impl<T: PartialEq + PartialOrd + std::fmt::Debug> BinarySearchTree<T> for Binary
             }
 
             let mut cur = self.root.as_ref().unwrap();
-            let mut curr_elem = &(*cur.as_ptr()).elem;
+            let mut curr_elem;
             let comp = &(*new.as_ptr()).elem;
             let mut depth = 1;
-            // Binary search algorithm
-            // At current: compare target with self.elem
-            // if match: return true
-            // if target smaller: move left
-            // if target bigger: move right
-            // return false if respective sides are empty
-            // loop ends if there if no siblings left to compare
-            todo!()
+
+            while (*cur.as_ptr()).left.is_some() || (*cur.as_ptr()).right.is_some() {
+                curr_elem = &(*cur.as_ptr()).elem;
+                if curr_elem == comp {
+                    //no need to add
+                    return;
+                }
+                if curr_elem > comp {
+                    //left side
+                    if (*cur.as_ptr()).left.is_some() {
+                        //move left
+                        cur = (*cur.as_ptr()).left.as_ref().unwrap();
+                    } else {
+                        //append here
+                        (*cur.as_ptr()).left = Some(new);
+                        self.depth = std::cmp::max(self.depth, depth + 1);
+                        self.size += 1;
+                        return;
+                    }
+                } else {
+                    //right side
+                    if (*cur.as_ptr()).right.is_some() {
+                        cur = (*cur.as_ptr()).right.as_ref().unwrap();
+                    } else {
+                        (*cur.as_ptr()).right = Some(new);
+                        self.depth = std::cmp::max(self.depth, depth + 1);
+                        self.size += 1;
+                        return;
+                    }
+                }
+                depth += 1;
+            }
+            //check final node (no sibling)
+            curr_elem = &(*cur.as_ptr()).elem;
+            if curr_elem == comp {
+                return;
+                //do nothing
+            } else if curr_elem > comp {
+                //append to left
+                (*cur.as_ptr()).left = Some(new);
+            } else {
+                //append to right
+                (*cur.as_ptr()).left = Some(new);
+            }
+            self.depth = std::cmp::max(self.depth, depth + 1);
+            self.size += 1;
         }
     }
 }
@@ -290,8 +553,13 @@ mod test {
         //adding to bst
         bst.bst_add(1);
         bst.bst_add(13);
-        assert_eq!(bst.flatten(), vec![10, 5, 11, 3, 6, 13, 1]);
         assert_eq!(bst.depth(), 4);
         assert_eq!(bst.size(), 7);
+        assert_eq!(bst.flatten(), vec![10, 5, 11, 3, 6, 13, 1]);
+    }
+
+    #[test]
+    fn iterators() {
+        todo!()
     }
 }
