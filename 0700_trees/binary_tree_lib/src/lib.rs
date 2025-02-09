@@ -1,6 +1,5 @@
-use std::{collections::VecDeque, marker::PhantomData, ptr::NonNull};
+use std::{collections::VecDeque, fmt::Debug, marker::PhantomData, ptr::NonNull};
 
-#[derive(Debug, Clone)]
 pub struct BinaryTree<T> {
     root: Link<T>,
     size: usize,
@@ -28,8 +27,8 @@ impl<T> BinaryTree<T> {
 
     // "flatten" the binary tree into a vec
     // in BFS order
-    pub fn flatten(self) -> Vec<T> {
-        let mut out = Vec::<T>::new();
+    pub fn flatten(self) -> VecDeque<T> {
+        let mut out = VecDeque::<T>::new();
         if self.is_empty() {
             return out;
         }
@@ -48,15 +47,15 @@ impl<T> BinaryTree<T> {
                     if cur.right.is_some() {
                         cur_level.push_back(cur.right);
                     }
-                    out.push(cur.elem);
+                    out.push_back(cur.elem);
                 }
             }
         }
         out
     }
 
-    pub fn add(&mut self, elem: T) {
-        todo!()
+    pub fn add(&mut self, _elem: T) {
+        //How should I even implement this idfk
     }
 
     // getting referecnes of nth (in BFS order) node
@@ -109,7 +108,7 @@ impl<T> BinaryTree<T> {
         Iter {
             root: self.root,
             size: self.size,
-            idx: 0,
+            idx: None,
             _phantom: PhantomData,
         }
     }
@@ -118,7 +117,7 @@ impl<T> BinaryTree<T> {
         IterMut {
             root: self.root,
             size: self.size,
-            idx: 0,
+            idx: None,
             _phantom: PhantomData,
         }
     }
@@ -169,7 +168,7 @@ impl<T: PartialOrd> Node<T> {
 pub struct Iter<'a, T> {
     root: Link<T>,
     size: usize,
-    idx: usize,
+    idx: Option<usize>,
     _phantom: PhantomData<&'a T>,
 }
 
@@ -177,27 +176,35 @@ impl<'a, T> Iterator for Iter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.size < self.idx {
-            return None;
-        }
-        let mut deque = VecDeque::new();
-        deque.push_back(self.root.as_ref());
-        let mut idx = 0;
         unsafe {
-            loop {
-                // BFS logic
-                let curr = deque.pop_front().unwrap().unwrap();
-                if self.idx == idx {
-                    return Some(&(*curr.as_ptr()).elem);
+            if self.root.is_none() {
+                None
+            } else if self.idx.is_none() {
+                self.idx = Some(0);
+                self.root.map(|node| &(*node.as_ptr()).elem)
+            } else {
+                let mut deque = VecDeque::new();
+                deque.push_back(self.root.as_ref());
+                let mut at = 0;
+                let target = self.idx.unwrap() + 1;
+                if target >= self.size {
+                    return None;
                 }
-
-                if (*curr.as_ptr()).left.is_some() {
-                    deque.push_back((*curr.as_ptr()).left.as_ref());
+                loop {
+                    // BFS logic
+                    let curr = deque.pop_front().unwrap().unwrap();
+                    if at == target {
+                        self.idx = Some(target);
+                        return Some(&(*curr.as_ptr()).elem);
+                    }
+                    if (*curr.as_ptr()).left.is_some() {
+                        deque.push_back((*curr.as_ptr()).left.as_ref());
+                    }
+                    if (*curr.as_ptr()).right.is_some() {
+                        deque.push_back((*curr.as_ptr()).right.as_ref());
+                    }
+                    at += 1;
                 }
-                if (*curr.as_ptr()).right.is_some() {
-                    deque.push_back((*curr.as_ptr()).right.as_ref());
-                }
-                idx += 1;
             }
         }
     }
@@ -228,7 +235,7 @@ impl<'a, T> IntoIterator for &'a BinaryTree<T> {
 pub struct IterMut<'a, T> {
     root: Link<T>,
     size: usize,
-    idx: usize,
+    idx: Option<usize>,
     _phantom: PhantomData<&'a mut T>,
 }
 
@@ -236,27 +243,35 @@ impl<'a, T> Iterator for IterMut<'a, T> {
     type Item = &'a mut T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.size < self.idx {
-            return None;
-        }
-        let mut deque = VecDeque::new();
-        deque.push_back(self.root.as_ref());
-        let mut idx = 0;
         unsafe {
-            loop {
-                // BFS logic
-                let curr = deque.pop_front().unwrap().unwrap();
-                if self.idx == idx {
-                    return Some(&mut (*curr.as_ptr()).elem);
+            if self.root.is_none() {
+                None
+            } else if self.idx.is_none() {
+                self.idx = Some(0);
+                self.root.map(|node| &mut (*node.as_ptr()).elem)
+            } else {
+                let mut deque = VecDeque::new();
+                deque.push_back(self.root.as_ref());
+                let mut at = 0;
+                let target = self.idx.unwrap() + 1;
+                if target >= self.size {
+                    return None;
                 }
-
-                if (*curr.as_ptr()).left.is_some() {
-                    deque.push_back((*curr.as_ptr()).left.as_ref());
+                loop {
+                    // BFS logic
+                    let curr = deque.pop_front().unwrap().unwrap();
+                    if at == target {
+                        self.idx = self.idx.map(|n| n + 1);
+                        return Some(&mut (*curr.as_ptr()).elem);
+                    }
+                    if (*curr.as_ptr()).left.is_some() {
+                        deque.push_back((*curr.as_ptr()).left.as_ref());
+                    }
+                    if (*curr.as_ptr()).right.is_some() {
+                        deque.push_back((*curr.as_ptr()).right.as_ref());
+                    }
+                    at += 1;
                 }
-                if (*curr.as_ptr()).right.is_some() {
-                    deque.push_back((*curr.as_ptr()).right.as_ref());
-                }
-                idx += 1;
             }
         }
     }
@@ -283,7 +298,7 @@ impl<'a, T> IntoIterator for &'a mut BinaryTree<T> {
 
 // 3. IntoIter
 pub struct IntoIter<T> {
-    tree: Vec<T>,
+    tree: VecDeque<T>,
 }
 
 impl<T> BinaryTree<T> {
@@ -298,7 +313,7 @@ impl<T> Iterator for IntoIter<T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.tree.pop()
+        self.tree.pop_front()
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -328,10 +343,35 @@ impl<T> Default for BinaryTree<T> {
     }
 }
 
+impl<T: Debug> Debug for BinaryTree<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_list().entries(self).finish()
+    }
+}
+
+impl<T: Clone> Clone for BinaryTree<T> {
+    fn clone(&self) -> Self {
+        let mut out = Self::new();
+        for e in self {
+            out.add(e.clone());
+        }
+        out
+    }
+}
+
 impl<T: PartialEq> PartialEq for BinaryTree<T> {
     fn eq(&self, other: &Self) -> bool {
-        todo!();
-        self.size == other.size && self.depth == other.depth
+        if self.size != other.size || self.depth != other.depth {
+            return false;
+        }
+        let mut si = self.iter();
+        let mut oi = other.iter();
+        for _i in 0..self.size {
+            if si.next() != oi.next() {
+                return false;
+            }
+        }
+        true
     }
 }
 
@@ -389,7 +429,7 @@ impl<T: PartialEq + PartialOrd> BinarySearchTree<T> for BinaryTree<T> {
         //if there's a hit, do nothing
         //if there isn't add to tree
         unsafe {
-            let mut new = NonNull::new_unchecked(Box::into_raw(Box::new(Node {
+            let new = NonNull::new_unchecked(Box::into_raw(Box::new(Node {
                 elem,
                 left: None,
                 right: None,
@@ -509,12 +549,15 @@ impl<T> FromIterator<T> for BinaryTree<T> {
 
 #[cfg(test)]
 mod test {
+    use std::{thread, time::Duration};
+
     use crate::BinarySearchTree;
 
     use super::BinaryTree;
 
     #[test]
     fn creation_from_iterable() {
+        thread::sleep(Duration::from_secs(10));
         let bt: BinaryTree<i32> = BinaryTree::new();
         assert!(bt.is_empty());
         assert!(bt.size() == 0);
@@ -560,6 +603,23 @@ mod test {
 
     #[test]
     fn iterators() {
-        todo!()
+        let bt = BinaryTree::<i32>::new();
+        assert_eq!(bt.iter().next(), None);
+
+        let mut bt = BinaryTree::from_iter([1, 2, 3]);
+        let mut bt_iter = bt.iter();
+        assert_eq!(bt_iter.next(), Some(&1));
+        assert_eq!(bt_iter.next(), Some(&2));
+        assert_eq!(bt_iter.next(), Some(&3));
+        assert_eq!(bt_iter.next(), None);
+
+        for n in &mut bt {
+            *n += 1;
+        }
+        assert_eq!(bt.flatten(), vec![2, 3, 4]);
+
+        let bt = BinaryTree::from_iter([1, 2, 3]);
+        let a = bt.into_iter().map(|n| n + 1).collect::<Vec<i32>>();
+        assert_eq!(a, vec![2, 3, 4]);
     }
 }
