@@ -25,6 +25,32 @@ impl<T> BinaryTree<T> {
         }
     }
 
+    pub fn custom_create(input: Vec<Option<T>>) -> Self {
+        // EX: [Some(1), None, Some(2), Some(3), Some(4), Some(5)]
+        //                          [Some(1)]
+        //
+        //           [None]                     [Some(2)]
+        //
+        //                              [Some(3)]      [Some(4)]
+        //
+        //                     [Some(5)]
+        //
+
+        unsafe {
+            for elem in input {
+                let mut new = NonNull::new_unchecked(Box::into_raw(Box::new(Node {
+                    elem,
+                    left: None,
+                    right: None,
+                })));
+
+                // BFS With a twist
+                // if we hit none, then we need to stop creating sibling nodes
+            }
+        }
+        todo!()
+    }
+
     // "flatten" the binary tree into a vec
     // in BFS order
     pub fn flatten(self) -> VecDeque<T> {
@@ -546,6 +572,42 @@ impl<T> FromIterator<T> for BinaryTree<T> {
         })
     }
 }
+
+//THIS IS GONNA BE HARD TO READ GODDAMN
+//
+// NEETCODE QUESTIONS
+// 1. INVERT BINARY TREE
+impl<T> Node<T> {
+    fn reverse(&mut self) {
+        //recursive
+        unsafe {
+            std::mem::swap(&mut self.left, &mut self.right);
+            if let Some(left) = self.left {
+                (*left.as_ptr()).reverse();
+            }
+            if let Some(right) = self.right {
+                (*right.as_ptr()).reverse();
+            }
+        }
+    }
+}
+
+impl<T> BinaryTree<T> {
+    pub fn reverse_tree(&mut self) {
+        unsafe {
+            if let Some(node) = self.root {
+                (*node.as_ptr()).reverse();
+            }
+        }
+    }
+}
+
+// 2. Maximum Depth
+// I'm out of depth on this one.
+// I'll see myself out.
+//
+
+// 3.
 
 #[cfg(test)]
 mod test {
