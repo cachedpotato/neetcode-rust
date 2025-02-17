@@ -607,7 +607,176 @@ impl<T> BinaryTree<T> {
 // I'll see myself out.
 //
 
-// 3.
+// 3. Balanced Binary Tree
+impl<T> BinaryTree<T> {
+    pub fn is_balanced(&self) -> bool {
+        //easy edge cases
+        if self.root.is_none() {
+            false
+        } else {
+            unsafe { Node::is_balanced(&(*self.root.as_ref().unwrap().as_ptr())) }
+        }
+    }
+}
+impl<T> Node<T> {
+    pub fn dfs(node: &Self, depth: &mut i32, curr: &mut i32) {
+        unsafe {
+            if node.left.is_none() && node.right.is_none() {
+                //do nothing
+            } else {
+                *depth = std::cmp::max(*depth, *curr);
+                if node.left.is_some() {
+                    Self::dfs(
+                        &*node.left.as_ref().unwrap().as_ptr(),
+                        depth,
+                        &mut (*curr + 1),
+                    );
+                }
+
+                if node.right.is_some() {
+                    Self::dfs(
+                        &*node.right.as_ref().unwrap().as_ptr(),
+                        depth,
+                        &mut (*curr + 1),
+                    );
+                }
+            }
+        }
+    }
+
+    pub fn is_balanced(&self) -> bool {
+        unsafe {
+            if self.left.is_none() && self.right.is_none() {
+                true
+            } else if self.left.is_some() && self.right.is_none() {
+                (*self.left.as_ref().unwrap().as_ptr()).left.is_none()
+                    && (*self.left.as_ref().unwrap().as_ptr()).right.is_none()
+            } else if self.left.is_none() && self.right.is_some() {
+                (*self.right.as_ref().unwrap().as_ptr()).left.is_none()
+                    && (*self.right.as_ref().unwrap().as_ptr()).right.is_none()
+            } else {
+                let mut l_depth = 0;
+                let mut r_depth = 0;
+                let mut curr = 0;
+                Node::dfs(
+                    &(*self.left.as_ref().unwrap().as_ptr()),
+                    &mut l_depth,
+                    &mut curr,
+                );
+                curr = 0;
+                Node::dfs(
+                    &(*self.right.as_ref().unwrap().as_ptr()),
+                    &mut r_depth,
+                    &mut curr,
+                );
+
+                if l_depth - r_depth > -2 && l_depth - r_depth < 2 {
+                    (*self.left.as_ref().unwrap().as_ptr()).is_balanced()
+                        && (*self.right.as_ref().unwrap().as_ptr()).is_balanced()
+                } else {
+                    false
+                }
+            }
+        }
+    }
+}
+
+// 4. Is same
+impl<T: Eq> BinaryTree<T> {
+    pub fn is_same_tree(&self, other: &Self) -> bool {
+        for (i, j) in self.iter().zip(other) {
+            if i != j {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+// 5. is subtree
+impl<T: Eq> BinaryTree<T> {
+    pub fn is_subtree(&self, other: &Self) -> bool {
+        if self.root.is_none() && other.root.is_some() {
+            false
+        } else if self.root.is_none() && other.root.is_none() {
+            true
+        } else {
+            unsafe {
+                (*self.root.as_ref().unwrap().as_ptr())
+                    .contains(&(*other.root.as_ref().unwrap().as_ptr()))
+            }
+        }
+    }
+}
+
+impl<T: Eq> Node<T> {
+    fn contains(&self, other: &Self) -> bool {
+        let mut stack = vec![];
+        unsafe {
+            stack.push(self);
+            while let Some(curr) = stack.pop() {
+                if curr.is_same(other) {
+                    return true;
+                }
+                if let Some(right) = curr.right {
+                    stack.push(&(*right.as_ptr()));
+                }
+                if let Some(left) = curr.left {
+                    stack.push(&(*left.as_ptr()));
+                }
+            }
+            false
+        }
+    }
+
+    fn is_same(&self, other: &Self) -> bool {
+        if self.elem != other.elem {
+            false
+        } else {
+            unsafe {
+                let left = self.left;
+                let other_left = other.left;
+                let right = self.right;
+                let other_right = other.right;
+
+                if left.is_none() && other_left.is_none()
+                    || right.is_none() && other_right.is_none()
+                {
+                    if let Some(node) = left {
+                        (*node.as_ptr()).is_same(&(*other_left.as_ref().unwrap().as_ptr()))
+                    } else {
+                        (*right.as_ref().unwrap().as_ptr())
+                            .is_same(&(*right.as_ref().unwrap().as_ptr()))
+                    }
+                } else {
+                    //check both
+                    (*left.as_ref().unwrap().as_ptr())
+                        .is_same(&(*other_left.as_ref().unwrap().as_ptr()))
+                        && (*right.as_ref().unwrap().as_ptr())
+                            .is_same(&(*right.as_ref().unwrap().as_ptr()))
+                }
+            }
+        }
+    }
+}
+
+// 6. LCM
+// Dear lord have mercy
+// I need a cursor
+impl<T> BinaryTree<T> {
+    pub fn lowest_common_ancestor(&self) -> Option<&T> {
+        todo!()
+    }
+}
+
+// 7. Level order Traversal
+
+impl<T> BinaryTree<T> {
+    pub fn level_order_traversal(&self) -> Vec<Option<&T>> {
+        //BFS with vectos for each depth
+        todo!()
+    }
+}
 
 #[cfg(test)]
 mod test {
