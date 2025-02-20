@@ -80,6 +80,10 @@ impl<T> BinaryTree<T> {
         out
     }
 
+    pub fn dfs(&self) -> Vec<&T> {
+        todo!()
+    }
+
     pub fn add(&mut self, _elem: T) {
         //How should I even implement this idfk
     }
@@ -772,9 +776,33 @@ impl<T> BinaryTree<T> {
 // 7. Level order Traversal
 
 impl<T> BinaryTree<T> {
-    pub fn level_order_traversal(&self) -> Vec<Option<&T>> {
+    pub fn level_order_traversal(tree: &Self) -> Vec<Vec<Option<&T>>> {
         //BFS with vectos for each depth
-        todo!()
+        let mut out = vec![];
+        unsafe {
+            if tree.is_empty() {
+                //do nothing
+            } else {
+                let mut q = VecDeque::new();
+                q.push_back(tree.root.as_ref());
+                while !q.is_empty() {
+                    let mut level = vec![];
+                    let l = q.len();
+                    for _ in 0..l {
+                        let curr = q.pop_front().unwrap().unwrap();
+                        level.push(Some(&(*curr.as_ptr()).elem));
+                        if (*curr.as_ptr()).left.is_some() {
+                            q.push_back((*curr.as_ptr()).left.as_ref());
+                        }
+                        if (*curr.as_ptr()).right.is_some() {
+                            q.push_back((*curr.as_ptr()).right.as_ref());
+                        }
+                    }
+                    out.push(level);
+                }
+            }
+            out
+        }
     }
 }
 
@@ -852,5 +880,19 @@ mod test {
         let bt = BinaryTree::from_iter([1, 2, 3]);
         let a = bt.into_iter().map(|n| n + 1).collect::<Vec<i32>>();
         assert_eq!(a, vec![2, 3, 4]);
+    }
+
+    #[test]
+    fn bfs() {
+        let bt = BinaryTree::from_iter([1, 2, 3, 4, 5, 6, 7]);
+        let vecs = BinaryTree::level_order_traversal(&bt);
+        assert_eq!(
+            vecs,
+            vec![
+                vec![Some(&1)],
+                vec![Some(&2), Some(&3)],
+                vec![Some(&4), Some(&5), Some(&6), Some(&7)]
+            ]
+        );
     }
 }
