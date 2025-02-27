@@ -81,11 +81,21 @@ impl<T> BinaryTree<T> {
     }
 
     pub fn dfs(&self) -> Vec<&T> {
+        // Non-recursive, stack dfs
+        // In-Order
+        let mut stack = Vec::new();
+        unsafe {
+            stack.push(self.root.as_ref().unwrap());
+            loop {
+                let curr = stack[0];
+                if (*curr.as_ptr()).left.is_some() {
+                    stack.push((*curr.as_ptr()).left.as_ref().unwrap());
+                    continue;
+                }
+                break;
+            }
+        }
         todo!()
-    }
-
-    pub fn add(&mut self, _elem: T) {
-        //How should I even implement this idfk
     }
 
     // getting referecnes of nth (in BFS order) node
